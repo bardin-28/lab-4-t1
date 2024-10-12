@@ -1,55 +1,81 @@
 name: CI/CD Pipeline
 
-# Запуск пайплайна при кожному пуші в main
 on:
   push:
     branches:
       - main
+      - heroku
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
-      # Клонування репозиторію
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Налаштування Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '18'
 
-      # Встановлення залежностей
       - name: Install dependencies
         run: npm install
 
-      # Збірка проєкту
       - name: Build project
         run: npm run build
 
-      # Запуск тестів
       - name: Run tests
         run: npm run test:unit
 
   docker:
     needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
-      # Клонування репозиторію
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Логін в Docker Hub
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # Збірка Docker образу
       - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-next-app-p4-t1:latest .
 
-      # Пуш Docker образу в Docker Hub
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/my-next-app-p4-t1
+
+  heroku:
+    if: github.ref == 'refs/heads/heroku'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the project
+        run: npm run build
+
+      - name: Log in to Heroku Container Registry
+        run: echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.HEROKU_APP_NAME }}:latest .
+
+      - name: Tag Docker image
+        run: docker tag ${{ secrets.HEROKU_APP_NAME }}:latest registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
+
+      - name: Push Docker image to Heroku
+        run: docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
+
+      - name: Release to Heroku
+        run: heroku container:release web --app ${{ secrets.HEROKU_APP_NAME }}
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
