@@ -48,7 +48,7 @@ jobs:
 
       # Збірка Docker образу
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-next-app-p4-t1 .
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-next-app-p4-t1:latest .
 
       # Пуш Docker образу в Docker Hub
       - name: Push Docker image
