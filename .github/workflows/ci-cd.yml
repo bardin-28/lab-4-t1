@@ -5,10 +5,10 @@ on:
     branches:
       - main
       - heroku
+      - cloud
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -31,7 +31,6 @@ jobs:
 
   docker:
     needs: build
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -42,44 +41,19 @@ jobs:
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-next-app-p4-t1:latest .
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-next-app:latest .
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/my-next-app-p4-t1
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/my-next-app:latest
 
-  heroku:
+  deploy-heroku:
     if: github.ref == 'refs/heads/heroku'
+    needs: docker
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build the project
-        run: npm run build
-
-      - name: Install Heroku CLI
-        run: |
-          curl https://cli-assets.heroku.com/install.sh | sh
-
-
-      - name: Log in to Heroku Container Registry
-        run: echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-
-
-      - name: Build Docker image
-        run: docker build -t ${{ secrets.HEROKU_APP_NAME }}:latest .
-
-      - name: Tag Docker image
-        run: docker tag ${{ secrets.HEROKU_APP_NAME }}:latest registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
-
-      - name: Push Docker image to Heroku
-        run: docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
 
       - name: Set Heroku stack to container
         run: heroku stack:set container --app ${{ secrets.HEROKU_APP_NAME }}
@@ -91,3 +65,36 @@ jobs:
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
 
+  deploy-cloud:
+    if: github.ref == 'refs/heads/cloud'
+    needs: docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Build Docker image
+        run: docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-next-app:latest .
+
+      - name: Push Docker image to Google Container Registry
+        run: docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-next-app:latest
+
+      - name: Deploy to Google Cloud Run
+        run: |
+          gcloud run deploy my-next-app \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-next-app:latest \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated
