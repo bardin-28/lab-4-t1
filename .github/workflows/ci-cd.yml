@@ -89,7 +89,7 @@ jobs:
         run: docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-next-app:latest .
 
       - name: Push Docker image to Google Container Registry
-        run: docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-next-app:latest
+        run: docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/devops-p4:latest
 
       - name: Deploy to Google Cloud Run
         run: |
