@@ -83,6 +83,14 @@ jobs:
         run: |
           echo '{"credHelpers":{"us-central1-docker.pkg.dev":"gcloud"}}' > ~/.docker/config.json
 
+      - name: Install Google Cloud Docker Credential Helper
+        run: |
+          sudo apt-get update && sudo apt-get install -y google-cloud-sdk google-cloud-sdk-docker-credential-gcr
+
+      - name: Configure Docker to use GCR credentials
+        run: |
+          docker-credential-gcr configure-docker
+
       - name: Build Docker image
         run: docker build -t us-central1-docker.pkg.dev/modern-girder-426011-j4/my-next-app:latest .
 
