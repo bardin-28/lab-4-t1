@@ -61,6 +61,10 @@ jobs:
       - name: Build the project
         run: npm run build
 
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
       - name: Log in to Heroku Container Registry
         run: echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
         env:
