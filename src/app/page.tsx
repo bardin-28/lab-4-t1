@@ -14,7 +14,7 @@ export default function Home() {
           priority
         />
         <h1>
-          Home page
+          Hello lab!
         </h1>
 
         <div className={styles.ctas}>
