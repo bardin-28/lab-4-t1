@@ -14,7 +14,7 @@ export default function Home() {
           priority
         />
         <h1>
-          Home page
+          hello heroku!
         </h1>
 
         <div className={styles.ctas}>
